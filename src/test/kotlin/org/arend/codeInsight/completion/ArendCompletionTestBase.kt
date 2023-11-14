@@ -111,15 +111,15 @@ abstract class ArendCompletionTestBase : ArendTestBase() {
     }
 
     protected fun doSingleCompletionMultifile(
-            @Language("Arend") before: String,
-            @Language("Arend") after: String
+            before: String,
+            after: String
     ) {
         fileTreeFromText(before).createAndOpenFileWithCaretMarker()
         executeSoloCompletion()
         myFixture.checkResult(replaceCaretMarker(after.trimIndent()))
     }
 
-    protected fun checkContainsCompletion(text: String, @Language("Arend") code: String) {
+    protected fun checkContainsCompletion(text: String, code: String) {
         InlineFile(code).withCaret()
         val variants = myFixture.completeBasic()
         checkNotNull(variants) {
@@ -129,7 +129,7 @@ abstract class ArendCompletionTestBase : ArendTestBase() {
         error("Expected completions that contain $text, but got ${variants.toList()}")
     }
 
-    protected fun checkNoCompletion(@Language("Arend") code: String) {
+    protected fun checkNoCompletion(code: String) {
         InlineFile(code).withCaret()
         noCompletionCheck()
     }

@@ -412,4 +412,12 @@ class ArendChangeSignatureTest: ArendChangeSignatureTestBase() {
     """, """
        \func foo {\property A : \Type} => 101
     """, listOf(-1))
+
+    fun testPrivate() = changeSignature("""
+       \private \func foo (A{-caret-} : \Type) => 101
+       \func bar => foo Nat
+    """, """
+       \private \func foo {A : \Type} => 101
+       \func bar => foo {Nat}
+    """, listOf(-1))
 }
