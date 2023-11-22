@@ -432,4 +432,42 @@ class ArendChangeSignatureTest: ArendChangeSignatureTestBase() {
 
        \func lol => foo.bar {Nat} 1 {?}
     """, listOf(1, "z"), listOf(Pair("z", Pair(true, "Nat"))))
+
+    fun testExternalParameters() = doChangeSignature("""
+    \class Foo {u : Nat} {
+      | v : Nat
+
+      \func foo (w : Nat) => u Nat.+ v Nat.+ w \where {
+        \func \infixl 1 +{-caret-}++ (x y : Nat) => u Nat.+ v Nat.+ w Nat.+ x Nat.+ y
+
+        \func usage1 (a b c : Nat) => a +++ b +++ c
+      }
+
+      \func usage2 (a b c : Nat) => foo.+++ 0 (foo.+++ 0 a b) c
+    }
+
+    \class Bar \extends Foo {
+      \func lol1 => Foo.foo.+++ 0 101 102
+    } \where {
+      \func lol2 => Foo.foo.+++ {\new Foo {101} 102} 0 101 102
+    }
+    """, """
+    \class Foo {u : Nat} {
+      | v : Nat
+
+      \func foo (w : Nat) => u Nat.+ v Nat.+ w \where {
+        \func \infixl 1 +++ {z : Nat} (x y : Nat) => u Nat.+ v Nat.+ w Nat.+ x Nat.+ y
+
+        \func usage1 (a b c : Nat) => a +++ {{?}} b +++ {{?}} c
+      }
+
+      \func usage2 (a b c : Nat) => foo.+++ 0 {{?}} (foo.+++ 0 {{?}} a b) c
+    }
+
+    \class Bar \extends Foo {
+      \func lol1 => Foo.foo.+++ 0 {{?}} 101 102
+    } \where {
+      \func lol2 => Foo.foo.+++ {\new Foo {101} 102} 0 {{?}} 101 102
+    }
+    """, listOf("z", 1, 2), listOf(Pair("z", Pair(false, "Nat"))))
 }

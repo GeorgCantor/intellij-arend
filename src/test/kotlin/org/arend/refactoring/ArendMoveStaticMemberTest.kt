@@ -1436,6 +1436,30 @@ class ArendMoveStaticMemberTest : ArendMoveTestBase() {
                } 
             """, "Main", "D", targetIsDynamic = true) //Note: There are instance inference errors in the resulting code
 
+    fun testMoveBetweenDynamics3() = doMoveRefactoring("""
+       \class C {foo : Nat} {
+         \func ba{-caret-}r (a : Nat) => a Nat.+ C.foo
+
+         \func usage => bar 101
+       }
+
+       \class D \extends C {
+         \func lol => bar
+       }
+    """, """
+       \class C {foo : Nat} {
+         \func usage => bar {_} 101
+       } \where {
+         \open D (bar)
+       }
+
+       \class D \extends C {
+         \func lol => bar
+
+         \func bar (a : Nat) => a Nat.+ C.foo
+       }
+    """, "Main", "D", targetIsDynamic = true)
+
     fun testInstanceRefFix() =
             doMoveRefactoring("""
                -- ! A.ard
@@ -1677,4 +1701,84 @@ $testMOR8Header
           foo.usage_x x 0 Nat.+ foo.bar.usage_y {y} 0 Nat.+ foo.bar.foobar.usage_z z Nat.+ w
       }
     """, "Main", "M", typecheck = true)
+
+    fun testComplicatedUsage2() = doMoveRefactoring("""
+       \class Foo {u : Nat} {
+         | v : Nat
+
+         \func foo {w : Nat} => u Nat.+ v Nat.+ w \where {
+           \func \infixl 1 +{-caret-}++ (x y : Nat) => u Nat.+ v Nat.+ w Nat.+ x Nat.+ y
+
+           \func usage1 (a b c : Nat) => a +++ b +++ c
+         }
+
+         \func usage2 (a b c : Nat) => a foo.+++ {0} b foo.+++ {0} c
+       }
+
+       \class Bar \extends Foo {
+         \func lol1 => 101 Foo.foo.+++ {0} 102
+       } \where {
+         \func lol2 => 101 Foo.foo.+++ {\new Foo {101} 102} {0} 102
+       }
+    """, """
+       \class Foo {u : Nat} {
+         | v : Nat
+
+         \func foo {w : Nat} => u Nat.+ v Nat.+ w \where {
+           \func usage1 (a b c : Nat) (_ : Bar) => a +++ {_} {\this} {w} b +++ {_} {\this} {w} c
+
+           \open Bar (+++)
+         }
+
+         \func usage2 (a b c : Nat) (_ : Bar) => a Bar.+++ {_} {\this} {0} b Bar.+++ {_} {\this} {0} c
+       }
+
+       \class Bar \extends Foo {
+         \func lol1 => 101 +++ {_} {_} {0} 102
+
+         \func \infixl 1 +++ {this : Foo} {w : Nat} (x y : Nat) => u Nat.+ v Nat.+ w Nat.+ x Nat.+ y
+       } \where {
+         \func lol2 => 101 +++ {_} {\new Foo {101} 102} {0} 102
+       } 
+    """, "Main", "Bar", typecheck = true, targetIsDynamic = true)
+
+    fun testComplicatedUsage3() = doMoveRefactoring("""
+      \class Foo {u : Nat} {
+        | v : Nat
+
+        \func foo (w : Nat) => u Nat.+ v Nat.+ w \where {
+          \func \infixl 1 +{-caret-}++ (x y : Nat) => u Nat.+ v Nat.+ w Nat.+ x Nat.+ y
+
+          \func usage1 (a b c : Nat) => a +++ b +++ c
+        }
+
+       \func usage2 (a b c : Nat) => foo.+++ 0 (foo.+++ 0 a b) c
+      }
+
+      \class Bar \extends Foo {
+        \func lol1 => (Foo.foo.+++ 0) 101 102
+      } \where {
+        \func lol2 => Foo.foo.+++ {\new Foo {101} 102} 0 101 102
+      }
+    """, """
+    \class Foo {u : Nat} {
+      | v : Nat
+
+      \func foo (w : Nat) => u Nat.+ v Nat.+ w \where {
+        \func usage1 (a b c : Nat) => +++ w (+++ w a b) c
+
+        \open Bar (+++)
+      }
+
+     \func usage2 (a b c : Nat) => Bar.+++ 0 (Bar.+++ 0 a b) c
+    }
+
+    \class Bar \extends Foo {
+      \func lol1 => (+++ 0) 101 102
+    } \where {
+      \func lol2 => +++ {\new Foo {101} 102} 0 101 102
+
+      \func \infixl 1 +++ {this : Foo} (w x y : Nat) => u Nat.+ v Nat.+ w Nat.+ x Nat.+ y
+    }  
+    """, "Main", "Bar", typecheck = true, targetIsDynamic = false)
 }
