@@ -6,14 +6,14 @@ import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.TextRange
 import com.intellij.openapi.wm.IdeFocusManager
-import com.intellij.psi.PsiComment
-import com.intellij.psi.PsiElement
-import com.intellij.psi.PsiRecursiveElementVisitor
-import com.intellij.psi.PsiWhiteSpace
+import com.intellij.psi.*
 import com.intellij.psi.codeStyle.CodeStyleManager
 import com.intellij.psi.util.elementType
 import com.intellij.psi.util.siblings
+import org.arend.core.context.param.DependentLink
+import org.arend.core.definition.ClassDefinition
 import org.arend.core.definition.Definition
+import org.arend.core.expr.type.Type
 import org.arend.ext.core.context.CoreBinding
 import org.arend.ext.core.context.CoreParameter
 import org.arend.ext.core.expr.CoreExpression
@@ -23,6 +23,7 @@ import org.arend.ext.variable.Variable
 import org.arend.ext.variable.VariableImpl
 import org.arend.naming.reference.GlobalReferable
 import org.arend.naming.reference.Referable
+import org.arend.naming.reference.TCDefReferable
 import org.arend.naming.renamer.StringRenamer
 import org.arend.naming.resolving.visitor.ExpressionResolveNameVisitor
 import org.arend.naming.scope.local.ElimScope
@@ -34,6 +35,7 @@ import org.arend.psi.ext.*
 import org.arend.psi.ext.ArendGroup
 import org.arend.psi.ext.ArendDefFunction
 import org.arend.quickfix.referenceResolve.ResolveReferenceAction
+import org.arend.resolving.util.ParameterImpl
 import org.arend.settings.ArendSettings
 import org.arend.term.Fixity
 import org.arend.term.NamespaceCommand
@@ -45,7 +47,11 @@ import org.arend.typechecking.TypeCheckingService
 import org.arend.util.getBounds
 import java.lang.IllegalArgumentException
 import java.math.BigInteger
+import java.util.*
 import java.util.Collections.singletonList
+import kotlin.collections.ArrayList
+import kotlin.collections.HashMap
+import kotlin.collections.HashSet
 import kotlin.math.max
 
 private fun addId(id: String, newName: String?, factory: ArendPsiFactory, using: ArendNsUsing): ArendNsId? {
@@ -700,6 +706,44 @@ fun transformPostfixToPrefix(psiFactory: ArendPsiFactory,
         }
     }
     return if (isLambda) result?.descendantOfType(true) else result as ArendArgumentAppExpr
+}
+
+fun flattenedParameters(params: List<Abstract.Parameter>) = params.map { tele -> when (tele) {
+    is ArendTypeTele -> tele.typedExpr?.identifierOrUnknownList?.map { iou -> iou.defIdentifier } ?: Collections.singletonList(
+        tele
+    )
+    is ArendNameTele -> tele.identifierOrUnknownList.map { iou -> iou.defIdentifier }
+    else -> throw IllegalArgumentException()
+}}.flatten()
+
+data class ImplicitParameterData(val parameterName: String,
+                                 val isExplicit: Boolean,
+                                 val typeExpression: String,
+                                 val correspondingDefinition: PsiElement)
+fun calculateImplicitParameters(def : ArendDefinition<*>): List<ImplicitParameterData>? {
+    val tcDef = (def.tcReferable as? TCDefReferable)?.typechecked
+    if (tcDef == null) for (p in def.ancestors) if (p is ArendDefinition<*> && p.getExternalParameters().isNotEmpty()) return null
+
+    if (tcDef != null)  {
+        val list1 = tcDef.parametersOriginalDefinitions.map {
+            val definition = ((it.proj1?.data as? SmartPsiElementPointer<*>)?.element as? Abstract.ParametersHolder)
+            Pair(definition, definition?.parameters?.let { flattenedParameters(it) }?.getOrNull(it.proj2))
+        }
+
+        return if (tcDef is ClassDefinition) {
+            tcDef.personalFields.subList(0, tcDef.parametersOriginalDefinitions.size).zip(list1).map {
+                val type = (it.second.second?.parent as? ArendNameTele)?.type?.text
+                ImplicitParameterData(it.first.name, it.first.referable.isExplicitField,  type ?: it.first.type.toString(), it.second.first as? ArendDefinition<*> ?: return null)
+            }
+        } else {
+            DependentLink.Helper.toList(DependentLink.Helper.take(if (tcDef.hasEnclosingClass()) tcDef.parameters.next else tcDef.parameters, tcDef.parametersOriginalDefinitions.size)).zip(list1).map {
+                val type = (it.second.second?.parent as? ArendNameTele)?.type?.text
+                ImplicitParameterData(it.first.name, it.first.isExplicit,  type ?: it.first.type.toString(), it.second.first as ArendDefinition<*> ?: return null)
+            }
+        }
+    }
+
+    return emptyList()
 }
 
 fun getPrec(psiElement: PsiElement?): ArendPrec? = when (psiElement) {

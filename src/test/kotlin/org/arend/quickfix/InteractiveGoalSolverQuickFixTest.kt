@@ -41,8 +41,8 @@ class InteractiveGoalSolverQuickFixTest : QuickFixTestBase() {
 
     private fun doTestWithGoalSolver(
         solver: InteractiveGoalSolver,
-        @Language("Arend") before: String,
-        @Language("Arend") after: String
+        before: String,
+        after: String
     ) {
         library.arendExtension = object : ArendExtension {
             override fun getGoalSolver() = object : GoalSolver {
@@ -53,7 +53,7 @@ class InteractiveGoalSolverQuickFixTest : QuickFixTestBase() {
         typedQuickFixTest(solver.shortDescription, before, after)
     }
 
-    class TestGoalSolver(@Language("Arend") val solution: String, val project: Project) : InteractiveGoalSolver {
+    class TestGoalSolver(val solution: String, val project: Project) : InteractiveGoalSolver {
         override fun getShortDescription(): String = "Solve test goal"
 
         override fun isApplicable(goalExpression: ConcreteGoalExpression, expectedType: CoreExpression?): Boolean = true

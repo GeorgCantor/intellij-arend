@@ -15,6 +15,7 @@ import org.arend.psi.*
 import org.arend.psi.ArendElementTypes.*
 import org.arend.psi.ext.*
 import org.arend.psi.parentOfType
+import org.arend.refactoring.calculateImplicitParameters
 import org.arend.resolving.ArendReferableConverter
 import org.arend.resolving.DataLocatedReferable
 import org.arend.resolving.util.ParameterImpl
@@ -137,7 +138,7 @@ class ArendParameterInfoHandler: ParameterInfoHandler<ArendReferenceContainer, L
             return if (numExplicitsBefore == 0 && numImplicitsJustBefore <= 0) paramIndex else -1
         }
 
-        fun getImplicitPrefixForReferable(def: ParametersHolder, newParameters: List<Referable?>? = null, newParametersReceiver: MutableList<Referable?>? = null): MutableList<Abstract.Parameter> {
+        fun getImplicitPrefixForReferable(def: ParametersHolder, newParameters: List<Referable?>? = null, newParametersReceiver: MutableList<Referable?>? = null): MutableList<Abstract.Parameter>? {
             val params = ArrayList<Abstract.Parameter>()
 
             val defAncestors = (def as? PsiElement)?.ancestors?.toList()?.filterIsInstance<PsiReferable>()
@@ -243,11 +244,15 @@ class ArendParameterInfoHandler: ParameterInfoHandler<ArendReferenceContainer, L
                         }
                     }
                 }
+            } else if (def is ArendDefinition<*>) {
+                val psiFactory = ArendPsiFactory(def.getProject())
+                val list = calculateImplicitParameters(def)
+                list?.forEach { params.add(ParameterImpl(it.isExplicit, singletonList(Referable { it.parameterName }), psiFactory.createExpression(it.typeExpression))) } ?: return null
             }
             return params
         }
 
-        fun getAllParametersForReferable(def: Referable, needImplicitConstructorParameters: Boolean = true, calledFromImportHintAction: Boolean = false): List<Abstract.Parameter> {
+        fun getAllParametersForReferable(def: Referable, needImplicitConstructorParameters: Boolean = true, calledFromImportHintAction: Boolean = false): List<Abstract.Parameter>? {
             if (def !is ParametersHolder) return emptyList()
             val psiFactory = ArendPsiFactory((def as PsiElement).project)
             val params = ArrayList<Abstract.Parameter>()
@@ -269,7 +274,7 @@ class ArendParameterInfoHandler: ParameterInfoHandler<ArendReferenceContainer, L
                 return params
             }
 
-            if (needImplicitConstructorParameters) params.addAll(getImplicitPrefixForReferable(def))
+            if (needImplicitConstructorParameters) params.addAll(getImplicitPrefixForReferable(def) ?: return null)
 
             params.addAll(def.parameters)
 
@@ -349,7 +354,7 @@ class ArendParameterInfoHandler: ParameterInfoHandler<ArendReferenceContainer, L
                 for (argument in expr.arguments) {
                     argExplicitness.add(argument.isExplicit)
                     val argRes = findArgInParsedBinopSeq(arg, argument.expression,
-                        funcReferable?.let { findParamIndex(getAllParametersForReferable(it, calledFromImportHintAction = true), argExplicitness) }
+                        funcReferable?.let { findParamIndex(getAllParametersForReferable(it, calledFromImportHintAction = true) ?: return null, argExplicitness) }
                             ?: -1, func)
                     if (argRes != null) return argRes
                 }

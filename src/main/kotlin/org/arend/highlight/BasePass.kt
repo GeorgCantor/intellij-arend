@@ -390,8 +390,8 @@ abstract class BasePass(protected open val file: IArendFile, editor: Editor, nam
             is FunctionArgInferenceError -> {
                 if (error.definition != null) {
                     val params = ArendParameterInfoHandler.getAllParametersForReferable(error.definition.referable.underlyingReferable)
-                        .map { it.referableList.map { r -> Pair(it.isExplicit, r) } }.flatten()
-                    if (error.index <= params.size) {
+                        ?.map { it.referableList.map { r -> Pair(it.isExplicit, r) } }?.flatten()
+                    if (params != null && error.index <= params.size) {
                         registerFix(builder, FunctionArgInferenceQuickFix(SmartPointerManager.createPointer(cause), error))
                     }
                 }

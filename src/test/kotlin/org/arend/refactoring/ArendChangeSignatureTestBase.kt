@@ -7,15 +7,14 @@ import org.arend.psi.ext.PsiLocatedReferable
 import org.arend.refactoring.changeSignature.ArendChangeInfo
 import org.arend.refactoring.changeSignature.ArendChangeSignatureProcessor
 import org.arend.refactoring.changeSignature.ArendParameterInfo
-import org.intellij.lang.annotations.Language
 import kotlin.math.abs
 
 abstract class ArendChangeSignatureTestBase: ArendTestBase() {
-    fun changeSignature(@Language("Arend") contents: String,
-                        @Language("Arend") resultingContent: String,
-                        options: List<Any>,
-                        typeQualifications: List<Pair<String, Pair<Boolean, String>>> = emptyList(),
-                        newName: String? = null) {
+    fun doChangeSignature(contents: String,
+                          resultingContent: String,
+                          options: List<Any>,
+                          typeQualifications: List<Pair<String, Pair<Boolean, String>>> = emptyList(),
+                          newName: String? = null) {
         val fileTree = fileTreeFromText(contents)
         fileTree.createAndOpenFileWithCaretMarker()
         val sourceElement = myFixture.elementAtCaret.ancestor<PsiLocatedReferable>() ?: throw AssertionError("Cannot find source anchor")

@@ -7,10 +7,10 @@ import org.intellij.lang.annotations.Language
 class SwapInfixOperatorArgumentsIntentionTest : QuickFixTestBase() {
     val fixName = ArendBundle.message("arend.expression.swapInfixArguments")
 
-    private fun doTest(@Language("Arend") before: String, @Language("Arend") after: String) =
+    private fun doTest(before: String, after: String) =
             typedQuickFixTest(fixName, before, after)
 
-    private fun doTestNoFix(@Language("Arend") code: String) = typedCheckNoQuickFixes(fixName, code)
+    private fun doTestNoFix(code: String) = typedCheckNoQuickFixes(fixName, code)
 
     fun `test infix`() = doTest(""" 
       \func \infixl 5 op (a b : Nat) : Nat => 0

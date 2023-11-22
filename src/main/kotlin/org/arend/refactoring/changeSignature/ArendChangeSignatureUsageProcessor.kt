@@ -34,9 +34,9 @@ class ArendChangeSignatureUsageProcessor : ChangeSignatureUsageProcessor {
         val refactoringDescriptors = ArrayList<ChangeSignatureRefactoringDescriptor>()
         val newParams = info.newParameters.toList().map { it as ArendParameterInfo }
         val d = info.method as Abstract.ParametersHolder
-        val implicitPrefix = ArendParameterInfoHandler.getImplicitPrefixForReferable(d).map { p ->
+        val implicitPrefix = ArendParameterInfoHandler.getImplicitPrefixForReferable(d)?.map { p ->
             p.referableList.map { Parameter(false, it) }
-        }.flatten()
+        }?.flatten() ?: return emptyArray()
         val mainParameters = d.parameters.map { p -> p.referableList.map { Parameter(p.isExplicit, it) } }.flatten()
 
         val newParametersPrefix = ArrayList<NewParameter>()

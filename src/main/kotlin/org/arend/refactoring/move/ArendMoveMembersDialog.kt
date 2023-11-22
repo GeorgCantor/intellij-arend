@@ -20,26 +20,32 @@ import com.intellij.ui.dsl.builder.Align
 import com.intellij.ui.dsl.builder.Row
 import com.intellij.ui.dsl.builder.panel
 import org.arend.ArendFileType
+import org.arend.core.context.param.DependentLink
+import org.arend.core.definition.ClassDefinition
 import org.arend.ext.module.ModulePath
 import org.arend.module.ModuleLocation
 import org.arend.module.ModuleScope
 import org.arend.module.config.ArendModuleConfigService
 import org.arend.naming.reference.Referable
+import org.arend.naming.reference.TCDefReferable
 import org.arend.naming.scope.EmptyScope
 import org.arend.naming.scope.LexicalScope
 import org.arend.naming.scope.Scope
-import org.arend.psi.ArendFile
+import org.arend.psi.*
 import org.arend.psi.ext.*
-import org.arend.psi.findGroupByFullName
-import org.arend.psi.libraryConfig
+import org.arend.refactoring.calculateImplicitParameters
+import org.arend.resolving.util.ParameterImpl
 import org.arend.util.FullName
 import org.arend.util.aligned
 import java.awt.BorderLayout
 import java.awt.Dimension
+import java.util.*
 import java.util.function.Predicate
 import javax.swing.Icon
 import javax.swing.JPanel
 import javax.swing.JRadioButton
+import kotlin.collections.ArrayList
+import kotlin.collections.HashMap
 
 class ArendMoveMembersDialog(project: Project,
                              elements: List<ArendGroup>,
@@ -185,7 +191,7 @@ class ArendMoveMembersDialog(project: Project,
                     showErrorMessage = false
                     val answer = Messages.showYesNoDialog(
                             myProject,
-                            "Target file $fileName does not exist.\n Do you want to create the file named $newFileName within the directory ${directory.name}?",
+                            "Target file $fileName does not exist.\n Do you want to create a file named $newFileName within the directory ${directory.name}?",
                             MoveMembersImpl.getRefactoringName(),
                             Messages.getQuestionIcon())
                     if (answer == Messages.YES) {
@@ -196,11 +202,51 @@ class ArendMoveMembersDialog(project: Project,
             }
         } else {
             targetContainer = locateResult.first
+            showErrorMessage = false
         }
 
-        if (targetContainer != null)
-            invokeRefactoring(ArendMoveRefactoringProcessor(project, {}, elementsToMove, sourceGroup as ArendGroup, targetContainer, dynamicGroup.isSelected, isOpenInEditor)) else
-            if (showErrorMessage) CommonRefactoringUtil.showErrorMessage(MoveMembersImpl.getRefactoringName(), getLocateErrorMessage(locateResult.second), HelpID.MOVE_MEMBERS, myProject)
+        //Validate that dynamically inferred implicit parameters of functions being moved are known
+        val problematicGroups = LinkedHashSet<ArendGroup>()
+        if (!showErrorMessage) {
+            for (def in elementsToMove) if (def is ArendDefinition<*>) {
+                val list = calculateImplicitParameters(def)
+                if (list == null) problematicGroups.add(def)
+            }
+
+            if (problematicGroups.isNotEmpty()) {
+                val builder = StringBuilder()
+                builder.append("Definition${if (problematicGroups.size > 1) "s " else " "}")
+
+                for (group in problematicGroups.withIndex()) {
+                    builder.append("`${group.value.name}`")
+                    builder.append(if (group.index < problematicGroups.size - 1) ", " else " ")
+                }
+
+                builder.append("might have external parameters. Normally, these are inferred by Arend typechecker, however, ")
+
+                builder.append(if (problematicGroups.size > 1) "these definitions have" else "this definition has")
+
+                builder.append(" not been successfully typechecked, so move refactoring might not be able to correctly infer ")
+
+                builder.append(if (problematicGroups.size > 1) "their signatures" else "its signature")
+
+                builder.append("and further manual editing might be required after the refactoring is performed. Would you like to proceed anyway?")
+
+                val answer = Messages.showYesNoDialog(
+                    myProject,
+                    builder.toString(),
+                    MoveMembersImpl.getRefactoringName(),
+                    Messages.getQuestionIcon())
+
+                if (answer == Messages.YES) {
+                    problematicGroups.clear()
+                }
+            }
+        }
+
+        if (targetContainer != null && problematicGroups.isEmpty())
+            invokeRefactoring(ArendMoveRefactoringProcessor(project, {}, elementsToMove, sourceGroup as ArendGroup, targetContainer, dynamicGroup.isSelected, isOpenInEditor))
+        else if (showErrorMessage) CommonRefactoringUtil.showErrorMessage(MoveMembersImpl.getRefactoringName(), getLocateErrorMessage(locateResult.second), HelpID.MOVE_MEMBERS, myProject)
     }
 
     override fun getPreferredFocusedComponent() = targetFileField

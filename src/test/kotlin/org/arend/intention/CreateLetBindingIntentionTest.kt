@@ -8,7 +8,7 @@ import org.arend.util.ArendBundle
 import org.intellij.lang.annotations.Language
 
 class CreateLetBindingIntentionTest : QuickFixTestBase() {
-    private fun doTestLet(expr: String, @Language("Arend") contents: String, @Language("Arend") result: String, uiShown: Boolean = true) {
+    private fun doTestLet(expr: String, contents: String, result: String, uiShown: Boolean = true) {
         if (uiShown) {
             UiInterceptors.register(ChooserInterceptor(null, StringUtil.escapeToRegexp(expr)))
         }

@@ -5,7 +5,7 @@ import org.arend.util.ArendBundle
 import org.intellij.lang.annotations.Language
 
 class ExtractExpressionToFunctionIntentionTest : QuickFixTestBase() {
-    private fun doTest(@Language("Arend") contents: String, @Language("Arend") result: String) =
+    private fun doTest(contents: String, result: String) =
         simpleQuickFixTest(ArendBundle.message("arend.generate.function.from.expression"), contents.trimIndent(), result.trimIndent())
 
     fun `test extract from selection`() = doTest("""

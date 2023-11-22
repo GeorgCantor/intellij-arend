@@ -28,7 +28,7 @@ class ArendDefDataChangeSignatureProcessor(val data: ArendDefData, val changeInf
                 cons,
                 newDataParametersReferables,
                 newConstructorPrefixReferables
-            ).map { p -> p.referableList.map { it } }.flatten()
+            )?.map { p -> p.referableList.map { it } }?.flatten() ?: return emptySet()
             val constructorPrefix = constructorPrefixReferables.map { Parameter(false, it) }
             val constructorParameters = cons.parameters.map { p -> p.referableList.map { Parameter(p.isExplicit, it) } }.flatten()
             val newConstructorPrefix = newConstructorPrefixReferables.map {

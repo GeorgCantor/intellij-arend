@@ -1,9 +1,12 @@
 package org.arend.refactoring
 
 import com.intellij.openapi.components.service
+import com.intellij.psi.PsiElement
 import org.arend.ArendTestBase
 import org.arend.fileTreeFromText
+import org.arend.psi.ArendPsiFactory
 import org.arend.psi.ancestor
+import org.arend.psi.ext.ArendDefinition
 import org.arend.psi.ext.ArendGroup
 import org.arend.refactoring.move.ArendMoveHandlerDelegate
 import org.arend.refactoring.move.ArendMoveMembersDialog
@@ -16,17 +19,21 @@ import org.intellij.lang.annotations.Language
 import java.lang.IllegalArgumentException
 
 abstract class ArendMoveTestBase : ArendTestBase() {
-    fun testMoveRefactoring(@Language("Arend") contents: String,
-                            @Language("Arend") resultingContent: String?, //Null indicates that an error is expected as a correct test result
-                            targetFile: String,
-                            targetName: String,
-                            targetIsDynamic: Boolean = false,
-                            useOpenCommands: Boolean = false) {
+    fun doMoveRefactoring(contents: String,
+                          resultingContent: String?, //Null indicates that an error is expected as a correct test result
+                          targetFile: String,
+                          targetName: String,
+                          targetIsDynamic: Boolean = false,
+                          useOpenCommands: Boolean = false,
+                          typecheck: Boolean = false) {
         val arendSettings = service<ArendSettings>()
         arendSettings.autoImportWriteOpenCommands = useOpenCommands
         try {
             val fileTree = fileTreeFromText(contents)
             fileTree.createAndOpenFileWithCaretMarker()
+
+            if (typecheck) typecheck()
+
             val sourceElement = myFixture.elementAtCaret.ancestor<ArendGroup>() ?: throw AssertionError("Cannot find source anchor")
 
             doPerformMoveRefactoringTest(resultingContent, targetFile, targetName, targetIsDynamic, listOf(sourceElement))
@@ -35,13 +42,13 @@ abstract class ArendMoveTestBase : ArendTestBase() {
         }
     }
 
-    fun testMoveRefactoring(@Language("Arend") contents: String,
-                            @Language("Arend") resultingContent: String?,
-                            targetFile: String,
-                            targetName: String,
-                            sourceFile: String,
-                            vararg sourceNames: String,
-                            targetIsDynamic: Boolean = false) {
+    fun doMoveRefactoring(contents: String,
+                          resultingContent: String?,
+                          targetFile: String,
+                          targetName: String,
+                          sourceFile: String,
+                          vararg sourceNames: String,
+                          targetIsDynamic: Boolean = false) {
         val fileTree = fileTreeFromText(contents)
         fileTree.createAndOpenFileWithCaretMarker()
         val sourceElements = ArrayList<ArendGroup>()
@@ -55,7 +62,7 @@ abstract class ArendMoveTestBase : ArendTestBase() {
         doPerformMoveRefactoringTest(resultingContent, targetFile, targetName, targetIsDynamic, sourceElements)
     }
 
-    private fun doPerformMoveRefactoringTest(@Language("Arend") resultingContent: String?,
+    private fun doPerformMoveRefactoringTest(resultingContent: String?,
                                              targetFile: String,
                                              targetName: String,
                                              targetIsDynamic: Boolean,

@@ -10,8 +10,12 @@ import org.junit.Assert
 
 class ArendParameterInfoTest : ArendTestBase() {
 
-    private fun checkParameterInfo(code: String, expectedHint: String) {
+    private fun checkParameterInfo(code: String, expectedHint: String, needsTypecheck: Boolean = false) {
         InlineFile(code).withCaret()
+
+        if (needsTypecheck) {
+            typecheck()
+        }
 
         val handler = ShowParameterInfoHandler.getHandlers(project, ArendLanguage.INSTANCE).firstOrNull() ?:
                             error("Could not find parameter info handler")
@@ -269,5 +273,12 @@ class ArendParameterInfoTest : ArendTestBase() {
 
        \func lol => consV {Nat} {0} {101}{-caret-} nullV 
     """, "{X}, {n}, <highlight>{_ : X}</highlight>, _ : Vec {X} n")
+
+    fun `test implicit parameters`() = checkParameterInfo("""
+       \func foo (x y z : Nat) => x \where
+         \func bar => y Nat.+ z                    
+            
+       \func fubar => foo.bar {-caret-}
+    """, "<highlight>y : Nat</highlight>, z : Nat", needsTypecheck = true)
 
 }

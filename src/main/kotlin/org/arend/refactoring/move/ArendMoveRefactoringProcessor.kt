@@ -153,6 +153,7 @@ class ArendMoveRefactoringProcessor(project: Project,
         val recordOtherDynamicMembers = (mySourceContainer as? ArendDefClass)?.let { determineDynamicClassElements(it) }
                 ?: emptySet()
         val memberReferences = HashSet<ArendReferenceElement>()
+        val externalParametersToAdd = HashMap<LocationDescriptor, List<ImplicitParameterData>>()
 
         run {
             val usagesInMovedBodies = HashMap<PsiLocatedReferable, MutableSet<LocationDescriptor>>()
@@ -163,6 +164,13 @@ class ArendMoveRefactoringProcessor(project: Project,
 
             for ((mIndex, m) in myMembers.withIndex())
                 collectUsagesAndMembers(emptyList(), m, mIndex, recordFields, usagesInMovedBodies, descriptorsOfAllMovedMembers, memberReferences)
+
+            for (m in myMembers) descriptorsOfAllMovedMembers[m]?.let { descriptor ->
+                val list = if (m is ArendDefinition<*>) calculateImplicitParameters(m) else emptyList()
+                if (list != null) externalParametersToAdd[descriptor] = list.filter {
+                    !myTargetContainer.ancestors.contains(it.correspondingDefinition)
+                }
+            }
 
             for (referable in usagesInMovedBodies.keys.minus(recordFields))
                 targetReferences[referable] = descriptorsOfAllMovedMembers[referable]?.let { DescriptorTargetReference(it) }
@@ -392,6 +400,12 @@ class ArendMoveRefactoringProcessor(project: Project,
 
         if (forceThisParameter) for (dynamicSubgroup in (myTargetContainer as ArendDefClass).dynamicSubgroups) {
             modifyRecordDynamicDefCalls(dynamicSubgroup, definitionsThatNeedThisParameter.toSet(), psiFactory, "\\this", true)
+        }
+
+        for (eP in externalParametersToAdd) if (eP.value.isNotEmpty()) {
+            val referable = movedReferablesMap[eP.key]
+            for (param in eP.value) println("Add ${param.parameterName} of type ${ param.typeExpression} to ${referable?.refName}")
+
         }
 
 

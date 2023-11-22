@@ -144,9 +144,9 @@ class RemoveClarifyingParensIntentionTest : QuickFixTestBase() {
       \func f => 1 + 2 ={-caret-} {Nat} 3
     """)
 
-    private fun typedQuickFixTest(@Language("Arend") before: String, @Language("Arend") after: String) =
+    private fun typedQuickFixTest(before: String, after: String) =
             typedQuickFixTest(ArendBundle.message("arend.expression.removeClarifyingParentheses"), before, after)
 
-    private fun typedCheckNoQuickFixes(@Language("Arend") code: String) =
+    private fun typedCheckNoQuickFixes(code: String) =
             typedCheckNoQuickFixes(ArendBundle.message("arend.expression.removeClarifyingParentheses"), code)
 }

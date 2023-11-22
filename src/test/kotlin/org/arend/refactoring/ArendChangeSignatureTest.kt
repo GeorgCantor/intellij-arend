@@ -3,7 +3,7 @@ package org.arend.refactoring
 import java.util.Collections.singletonList
 
 class ArendChangeSignatureTest: ArendChangeSignatureTestBase() {
-    fun testFunctionChangeExplicitness() = changeSignature(
+    fun testFunctionChangeExplicitness() = doChangeSignature(
         """
            \func foo{-caret-} (a b c : Nat) => a Nat.+ b Nat.+ c
         """,
@@ -11,7 +11,7 @@ class ArendChangeSignatureTest: ArendChangeSignatureTestBase() {
            \func foo (a : Nat) {b : Nat} (c : Nat) => a Nat.+ b Nat.+ c
         """, listOf(1, -2, 3))
 
-    fun testFunctionReorder() = changeSignature(
+    fun testFunctionReorder() = doChangeSignature(
         """
             \func foo{-caret-} (a b c : Nat) => a
             \func bar => foo 1 2 3
@@ -20,7 +20,7 @@ class ArendChangeSignatureTest: ArendChangeSignatureTestBase() {
             \func bar => foo 3 {2} 1
         """, listOf(3, -2, 1))
 
-    fun testFunctionDeleteInsertArg() = changeSignature(
+    fun testFunctionDeleteInsertArg() = doChangeSignature(
         """
            \func foo{-caret-} (a b c : Nat) => a
            \func bar => foo 1 2 3
@@ -30,14 +30,14 @@ class ArendChangeSignatureTest: ArendChangeSignatureTestBase() {
         """, listOf(3, 1, "d"), listOf(Pair("d", Pair(true, "Nat")))
     )
 
-    fun testRemoveArg() = changeSignature(
+    fun testRemoveArg() = doChangeSignature(
         """
            \func bar{-caret-} (x : Nat) => 1
         """, """
            \func bar => 1
         """, listOf())
 
-    fun testRemoveArg2() = changeSignature(
+    fun testRemoveArg2() = doChangeSignature(
         """
            \func foo{-caret-} (a b c d : Nat) => bar a
 
@@ -48,7 +48,7 @@ class ArendChangeSignatureTest: ArendChangeSignatureTestBase() {
            \func bar (x : Nat) => foo 
         """, listOf(3, 4))
 
-    fun testRecordReorder() = changeSignature(
+    fun testRecordReorder() = doChangeSignature(
         """
            \record R {
              \func test => foo {_} {1} {2} {3}
@@ -63,7 +63,7 @@ class ArendChangeSignatureTest: ArendChangeSignatureTestBase() {
            } 
         """, listOf(-3, -2, -1))
 
-    fun testWhitespace() = changeSignature(
+    fun testWhitespace() = doChangeSignature(
         """
             \func foo{-caret-} -- test
                {{-1-}X {-2-} Y : {- 3 -} \Type {-4-}} -- foo
@@ -76,25 +76,25 @@ class ArendChangeSignatureTest: ArendChangeSignatureTestBase() {
                X => x
         """, listOf(-2, -1, "Z", 4, 3), listOf(Pair("Z", Pair(true, "\\Type"))))
 
-    fun testWhitespace2() = changeSignature("""
+    fun testWhitespace2() = doChangeSignature("""
            \func foo{-caret-} ({-1-} a {-2-} b {-3-} c {-4-} d {-5-} : Nat) => 1
     """, """
            \func foo ({-1-} a {-5-} : Nat) {{-2-} b : Nat} ({-3-} c : Nat) => 1
     """, listOf(1, -2, 3))
 
-    fun testLevelsInSignature() = changeSignature("""
+    fun testLevelsInSignature() = doChangeSignature("""
            \func \infix 1 foo{-caret-} \plevels p1 <= p2 \hlevels h1 >= h2 >= h3 \alias fubar : Nat => 101
     """, """
            \func \infix 1 foobar \plevels p1 <= p2 \hlevels h1 >= h2 >= h3 \alias fubar (A : \Type) : Nat => 101
     """, listOf("A"), listOf(Pair("A", Pair(true, "\\Type"))), "foobar")
 
-    fun testRenameParameters() = changeSignature("""
+    fun testRenameParameters() = doChangeSignature("""
        \func foo{-caret-} (a b : Nat) => a Nat.+ b 
     """, """
        \func foo (b a : Nat) => b Nat.+ a 
     """, listOf(Pair(1, "b"), Pair(2, "a")))
 
-    fun testWith() = changeSignature("""
+    fun testWith() = doChangeSignature("""
        \func foo{-caret-} (a b : Nat) : Nat \with {
          | 0, 0 => 0
          | 0, _ => 1
@@ -114,7 +114,7 @@ class ArendChangeSignatureTest: ArendChangeSignatureTestBase() {
        \func test => foo 2 1
     """, listOf(2, 1))
 
-    fun testRemoveArgumentInElim() = changeSignature("""
+    fun testRemoveArgumentInElim() = doChangeSignature("""
        \func foo{-caret-} (x y z : Nat) : Nat \elim x, y {
          | 0, 0 => z
          | _, _ => 1
@@ -126,7 +126,7 @@ class ArendChangeSignatureTest: ArendChangeSignatureTestBase() {
        } 
     """, listOf(1, 3))
 
-    fun testClausesWithoutElim() = changeSignature("""
+    fun testClausesWithoutElim() = doChangeSignature("""
        \func foo{-caret-} (l : Array Nat) : Nat
          | nil => 0 
     """, """
@@ -134,7 +134,7 @@ class ArendChangeSignatureTest: ArendChangeSignatureTestBase() {
          | {nil} => 0 
     """, listOf(-1))
 
-    fun testCombined() = changeSignature("""
+    fun testCombined() = doChangeSignature("""
        \data List (A : \Set) | nil | cons A (List A)
 
        \func zip{-caret-} {A {-foo-} B : \Set} 
@@ -162,7 +162,7 @@ class ArendChangeSignatureTest: ArendChangeSignatureTestBase() {
                    Pair("y", Pair(true, "List Y")),
                    Pair("z", Pair(true, "List Z"))), "doubleZip2")
 
-    fun testFunc() = changeSignature("""
+    fun testFunc() = doChangeSignature("""
        \func foo{-caret-} {n : Nat} (m : Nat) : Nat \with
          | {zero}, q => q
          | {suc n}, q => foo {n} 1
@@ -172,7 +172,7 @@ class ArendChangeSignatureTest: ArendChangeSignatureTestBase() {
          | {q}, suc n => zoo {1} n
     """, listOf(Pair(-2, "zz"), Pair(-1, "q")), listOf(), "zoo")
 
-    fun testCombined2() = changeSignature("""
+    fun testCombined2() = doChangeSignature("""
        \module M \where {
          \func foo \alias fu{-caret-} (a : Nat) (b : Nat) => a Nat.+ b
   
@@ -202,7 +202,7 @@ class ArendChangeSignatureTest: ArendChangeSignatureTestBase() {
        } 
     """, listOf(Pair(-2, "a"), Pair(-1, "b")), emptyList(), "foobar")
 
-    fun testCombinedData() = changeSignature("""
+    fun testCombinedData() = doChangeSignature("""
        \module M \where \data MyData{-caret-} {X : \Type} {Y : \Type} (x : X) (y : Y) (n : Nat) \elim n
          | zero => \infixl 2 consZero (x = x)
          | suc n' => \infixl 1 consSuc (MyData {X} {Y} x y n') (MyData {X} {Y} x y n')
@@ -239,7 +239,7 @@ class ArendChangeSignatureTest: ArendChangeSignatureTestBase() {
                 Pair(4, "y"),
                 Pair(3, "x")), singletonList(Pair("y", Pair(true, "X"))), "MyData2")
 
-    fun testCombinedData2() = changeSignature(""" 
+    fun testCombinedData2() = doChangeSignature(""" 
        \class C {Z : \Type} {
          \data Foo{-caret-} \alias Fu {X Y : \Type} (n : Nat) \elim n
            | zero => nil X Z
@@ -257,7 +257,7 @@ class ArendChangeSignatureTest: ArendChangeSignatureTestBase() {
        \func lol (I : C {Nat}) : C.Fu _ 2 {?} => C.cons {_} {_} {_} {{?}} 1 (C.cons {_} {_} {_} {{?}} 2 (C.nil {I} {_} {{?}} 3 4)) 
     """, listOf(Pair(-1, "X"), Pair(3, "n"), "m"), listOf(Pair("m", Pair(true, "Nat"))), "Bar")
 
-    fun testData3() = changeSignature("""
+    fun testData3() = doChangeSignature("""
        \data Vec{-caret-} {X : \Type} (n : Nat) \with
          | {X}, zero => nullV
          | {X}, suc n => consV {X} (Vec {X} n)
@@ -271,7 +271,7 @@ class ArendChangeSignatureTest: ArendChangeSignatureTestBase() {
        \func lol => consV {Nat} {101} (consV {_} {101} nullV)
     """, listOf(Pair(1, "X")))
 
-    fun testData4() = changeSignature("""
+    fun testData4() = doChangeSignature("""
        \data Vec2{-caret-} (n : Nat) \with
          | zero => nullV2
          | suc n => consV2 (Vec2 n)
@@ -281,7 +281,7 @@ class ArendChangeSignatureTest: ArendChangeSignatureTestBase() {
          | {-suc n =>-} consV2 (Vec2)
     """, listOf())
 
-    fun testData5() = changeSignature("""
+    fun testData5() = doChangeSignature("""
        \data Vec{-caret-} Nat Nat \with
          | zero, suc m => cons1 Nat (Vec 0 m)
          | suc n, zero => cons2 (Vec n 0) Nat 
@@ -291,7 +291,7 @@ class ArendChangeSignatureTest: ArendChangeSignatureTestBase() {
          | zero, suc n => cons2 (Vec 0 n) Nat 
     """, listOf(Pair(2, "_"), Pair(1, "_")))
 
-    fun testData6() = changeSignature("""
+    fun testData6() = doChangeSignature("""
        \data Vec{-caret-} (n : Nat) \with
          | zero => null
          | suc n => cons (Vec n)
@@ -301,7 +301,7 @@ class ArendChangeSignatureTest: ArendChangeSignatureTestBase() {
          | {suc n} => cons (Vec {n})
     """, listOf(Pair(-1, "n")))
 
-    fun testData7() = changeSignature("""
+    fun testData7() = doChangeSignature("""
        \data Lol{-caret-} {n : Nat} (m : Nat) \with
          | 1 => cons1
          | {0}, p => cons2 Nat
@@ -313,7 +313,7 @@ class ArendChangeSignatureTest: ArendChangeSignatureTestBase() {
          | {suc p}, 1 => cons3 (Lol {p} 0)
     """, listOf(Pair(-2, "m"), Pair(-1, "n")))
 
-    fun testConstructor() = changeSignature("""
+    fun testConstructor() = doChangeSignature("""
        \data K2
          | base
          | loop Nat : base = base
@@ -335,7 +335,7 @@ class ArendChangeSignatureTest: ArendChangeSignatureTestBase() {
          }
     """, listOf(Pair(-1, "n"), Pair(-2, "n'"), Pair(-3, "i"), Pair(-4, "j")))
 
-    fun testClass() = changeSignature("""
+    fun testClass() = doChangeSignature("""
        \data Bool | true | false
        \data List (X : \Type) | nil | cons X (List X)
 
@@ -371,7 +371,7 @@ class ArendChangeSignatureTest: ArendChangeSignatureTestBase() {
        \func usage3 => \new C2 {Nat} 1 Bool
     """, listOf(Pair(-1, "XX")))
 
-    fun testClass2() = changeSignature("""
+    fun testClass2() = doChangeSignature("""
        \data Bool | true | false
        \data List (X : \Type) | nil | cons X (List X)
 
@@ -407,17 +407,29 @@ class ArendChangeSignatureTest: ArendChangeSignatureTestBase() {
        \func usage3 => \new C2 Nat 1 Bool
     """, listOf(Pair(-1, "Z"), Pair(-2, "z")))
 
-    fun testProperty() = changeSignature("""
+    fun testProperty() = doChangeSignature("""
        \func foo (\property {-caret-}A : \Type) => 101
     """, """
        \func foo {\property A : \Type} => 101
     """, listOf(-1))
 
-    fun testPrivate() = changeSignature("""
+    fun testPrivate() = doChangeSignature("""
        \private \func foo (A{-caret-} : \Type) => 101
        \func bar => foo Nat
     """, """
        \private \func foo {A : \Type} => 101
        \func bar => foo {Nat}
     """, listOf(-1))
+
+    fun testImplicitParameters() = doChangeSignature("""
+       \func foo (x : \Type) => x \where
+         \func bar{-caret-} (y : x) => y
+
+       \func lol => foo.bar {Nat} 1
+    """, """
+       \func foo (x : \Type) => x \where
+         \func bar (y : x) (z : Nat) => y
+
+       \func lol => foo.bar {Nat} 1 {?}
+    """, listOf(1, "z"), listOf(Pair("z", Pair(true, "Nat"))))
 }
